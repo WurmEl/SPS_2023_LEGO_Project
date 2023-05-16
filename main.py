@@ -9,7 +9,7 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-# --- enter values from callibration here -------------------------------------
+# --- enter values from calibration here -------------------------------------
 
 COL_FLOOR = 30
 COL_LINE = 60
@@ -18,7 +18,7 @@ RGB_DRIVE_RIGHT = (250, 250, 250)
 RGB_DRIVE_LEFT = (30, 30, 30)
 RGB_WITHIN_PERCENTAGE = 0.05
 
-# speed an angle can be increased and decreased depending on steepnes of 
+# speed an angle can be increased and decreased depending on steepens of 
 # the curves in the line
 SPEED = 70 
 ANGLE = 30
@@ -72,8 +72,8 @@ def is_color_within_range(color1, color2, range_percent):
 
 def handle_collision():
     global current_state
-    # a lot of magic numbers happen here, outcome heavly depends on 
-    # correct callibration here - a lot of testing is needed
+    # a lot of magic numbers happen here, outcome heavily depends on 
+    # correct calibration here - a lot of testing is needed
     if is_color_within_range(RGB_DRIVE_RIGHT, front_color_sensor.rgb(), 
                             RGB_WITHIN_PERCENTAGE):
         current_state = 3
@@ -106,8 +106,8 @@ def check_surroundings():
         robot.stop()
         current_state = 0
 
-    # a lot of magic numbers happen here, outcome heavly depends on 
-    # correct callibration here - a lot of testing is needed
+    # a lot of magic numbers happen here, outcome heavily depends on 
+    # correct calibration here - a lot of testing is needed
     if current_state == 2 and colli_sonic_sensor.distance() < 40:
         handle_collision()
     elif current_state == 3 and bot_color_sensor.reflection() > COL_THRESHOLD:
