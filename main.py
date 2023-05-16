@@ -136,20 +136,17 @@ while True:
     check_surroundings()
     print_state()
 
-    if current_state == 0 or current_state == 1:
+    if current_state == 0 or current_state == 1: #finished or break
         ev3.speaker.beep()
         break
-    elif current_state == 2:
+    
+    elif current_state == 2: #follow line
         follow_line()
-    elif current_state == 3:
+
+    elif current_state == 3 or current_state == 4: #drive right or left
         if bot_color_sensor.reflection() > COL_THRESHOLD:
             back_on_line()
         else:
-            robot.drive(100, -30)
-    elif current_state == 4:
-        if bot_color_sensor.reflection() > COL_THRESHOLD:
-            back_on_line()
-        else:
-            robot.drive(100, 30)
+            robot.drive(100, 30 if current_state == 3 else -30)
     
     wait(50)
