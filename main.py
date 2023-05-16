@@ -20,7 +20,7 @@ RGB_WITHIN_PERCENTAGE = 0.05
 
 # speed an angle can be increased and decreased depending on steepens of 
 # the curves in the line
-SPEED = 70 
+SPEED = 70
 ANGLE = 30
 
 # --- Initializations ---------------------------------------------------------
@@ -45,7 +45,7 @@ robot = DriveBase(left_motor, right_motor, wheel_diameter=42, axle_track=140)
 # DRIVE_LEFT = 3
 # DRIVE_RIGHT = 4
 
-global current_state 
+current_state 
 current_state = 2
 
 # --- functions ---------------------------------------------------------------
@@ -61,6 +61,7 @@ def print_state():
     }
     ev3.screen.clear()
     ev3.screen.draw_text(0, 10, states.get(current_state, "Unknown"))
+# end print_state
 
 def is_color_within_range(color1, color2, range_percent):
     for component1, component2 in zip(color1, color2):
@@ -69,61 +70,66 @@ def is_color_within_range(color1, color2, range_percent):
         if component1 < min_value or component1 > max_value:
             return False
     return True
+# end is_color_within_range
+
+def drive_around_object():
+    global current_state
+
+    # a lot of magic numbers happen here, outcome heavily depends on 
+    # correct calibration here - a lot of testing is needed
+    print_state()
+    robot.straight(-30)
+    robot.turn(-90 if current_state == 4 else 90)
+    robot.drive(100, 30 if current_state == 4 else -30)
+    wait(1000)
+# end drive_around_object
 
 def handle_collision():
     global current_state
-    # a lot of magic numbers happen here, outcome heavily depends on 
-    # correct calibration here - a lot of testing is needed
+
     if is_color_within_range(RGB_DRIVE_RIGHT, front_color_sensor.rgb(), 
                             RGB_WITHIN_PERCENTAGE):
-        current_state = 3
-        print_state()
-        robot.straight(-30)
-        robot.turn(90)
-        robot.drive(100, -30)
-        wait(2000)
+        current_state = 3 #driving right
+        drive_around_object()
     elif is_color_within_range(RGB_DRIVE_LEFT, front_color_sensor.rgb(), 
                             RGB_WITHIN_PERCENTAGE):
-        current_state = 4
-        print_state()
-        robot.straight(-30)
-        robot.turn(-90)
-        robot.drive(100, 30)
-        wait(1000)
+        current_state = 4 #driving left
+        drive_around_object()
     else:
         robot.stop()
         current_state = 0
-        # current_state = 3
-        # print_state()
-        # robot.straight(-30)
-        # robot.turn(90)
-        # robot.drive(100, -30)
-        # wait(1000)
+# end handle_collision
 
 def check_surroundings():
     global current_state
+
+    # edge in front of robot detected
     if edge_infrared_sensor.distance() > 10:
         robot.stop()
-        current_state = 0
+        current_state = 0 #break
+
+    # object in front of robot 
+    if current_state == 2 and colli_sonic_sensor.distance() < 40:
+        handle_collision()
+# end check_surroundings
+
+def back_on_line():
+    global current_state
 
     # a lot of magic numbers happen here, outcome heavily depends on 
     # correct calibration here - a lot of testing is needed
-    if current_state == 2 and colli_sonic_sensor.distance() < 40:
-        handle_collision()
-    elif current_state == 3 and bot_color_sensor.reflection() > COL_THRESHOLD:
-        robot.straight(85)
-        robot.turn(60)
-        current_state = 2
-    elif current_state == 4 and bot_color_sensor.reflection() > COL_THRESHOLD:
-        robot.straight(85)
-        robot.turn(-60)
-        current_state = 2
+    robot.straight(85)
+    robot.turn(60 if current_state == 3 else -60)
+
+    current_state = 2 # follow line
+# end back_on_line
 
 def follow_line():
     if bot_color_sensor.reflection() < COL_THRESHOLD:
         robot.drive(SPEED,ANGLE)
     else:
         robot.drive(SPEED,ANGLE * -1)
+# end follow_line
 
 # --- main loop ---------------------------------------------------------------
 while True:
@@ -136,8 +142,14 @@ while True:
     elif current_state == 2:
         follow_line()
     elif current_state == 3:
-        robot.drive(100, -30)
+        if bot_color_sensor.reflection() > COL_THRESHOLD:
+            back_on_line()
+        else:
+            robot.drive(100, -30)
     elif current_state == 4:
-        robot.drive(100, 30)
+        if bot_color_sensor.reflection() > COL_THRESHOLD:
+            back_on_line()
+        else:
+            robot.drive(100, 30)
     
     wait(50)
