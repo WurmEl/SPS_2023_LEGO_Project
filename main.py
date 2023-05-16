@@ -9,7 +9,7 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-# --- enter values from calibration here -------------------------------------
+# --- enter values for calibration --------------------------------------------
 
 COL_FLOOR = 30
 COL_LINE = 60
@@ -22,6 +22,18 @@ RGB_WITHIN_PERCENTAGE = 0.05
 # the curves in the line
 SPEED = 70
 ANGLE = 30
+
+# values for driving around the object - heavily depends on outcome
+OBSTACLE_BACKWARDS_LENGTH = -30
+BACK_ON_LINE_FORWARD_LENGTH = 85
+TURN_RATE_ON_BACK_ON_LINE = 60
+TURN_RATE_ON_DRIVE_AROUND = 90
+TURN_SPEED = 100
+TURN_ANGLE = 30
+
+# wait times
+WAIT_TIME_EACH_CYCLE = 50
+WAIT_TIME_CYCLE = 1000
 
 # --- Initializations ---------------------------------------------------------
 ev3 = EV3Brick()
@@ -39,13 +51,12 @@ COL_THRESHOLD = (COL_FLOOR + COL_LINE) / 2
 robot = DriveBase(left_motor, right_motor, wheel_diameter=42, axle_track=140)
 
 # possible states at runtime (ev3 doesn't know enums >.>)
-# BREAK = 0
-# FINISH = 1
-# FOLLOW_LINE = 2
-# DRIVE_LEFT = 3
-# DRIVE_RIGHT = 4
+BREAK = 0
+FINISH = 1
+FOLLOW_LINE = 2
+DRIVE_LEFT = 3
+DRIVE_RIGHT = 4
 
-current_state 
 current_state = 2
 
 # --- functions ---------------------------------------------------------------
@@ -74,14 +85,17 @@ def is_color_within_range(color1, color2, range_percent):
 
 def drive_around_object():
     global current_state
-
-    # a lot of magic numbers happen here, outcome heavily depends on 
-    # correct calibration here - a lot of testing is needed
     print_state()
-    robot.straight(-30)
-    robot.turn(-90 if current_state == 4 else 90)
-    robot.drive(100, 30 if current_state == 4 else -30)
-    wait(1000)
+
+    robot.straight(OBSTACLE_BACKWARDS_LENGTH)
+
+    turn_rate = TURN_RATE_ON_DRIVE_AROUND if current_state == DRIVE_RIGHT else -TURN_RATE_ON_DRIVE_AROUND
+    robot.turn(turn_rate)
+
+    drive_around_angle = TURN_ANGLE if current_state == DRIVE_LEFT else -TURN_ANGLE
+    robot.drive(TURN_SPEED, drive_around_angle)
+
+    wait(WAIT_TIME_AFTER_START_DRIVE_AROUND)
 # end drive_around_object
 
 def handle_collision():
@@ -89,15 +103,17 @@ def handle_collision():
 
     if is_color_within_range(RGB_DRIVE_RIGHT, front_color_sensor.rgb(), 
                             RGB_WITHIN_PERCENTAGE):
-        current_state = 3 #driving right
+        current_state = DRIVE_LEFT
         drive_around_object()
+
     elif is_color_within_range(RGB_DRIVE_LEFT, front_color_sensor.rgb(), 
                             RGB_WITHIN_PERCENTAGE):
-        current_state = 4 #driving left
+        current_state = DRIVE_RIGHT
         drive_around_object()
+
     else:
         robot.stop()
-        current_state = 0
+        current_state = BREAK
 # end handle_collision
 
 def check_surroundings():
@@ -106,22 +122,23 @@ def check_surroundings():
     # edge in front of robot detected
     if edge_infrared_sensor.distance() > 10:
         robot.stop()
-        current_state = 0 #break
+        current_state = BREAK
 
     # object in front of robot 
-    if current_state == 2 and colli_sonic_sensor.distance() < 40:
+    if current_state == FOLLOW_LINE and colli_sonic_sensor.distance() < 40:
         handle_collision()
 # end check_surroundings
 
 def back_on_line():
     global current_state
 
-    # a lot of magic numbers happen here, outcome heavily depends on 
-    # correct calibration here - a lot of testing is needed
-    robot.straight(85)
-    robot.turn(60 if current_state == 3 else -60)
+    robot.straight(BACK_ON_LINE_FORWARD_LENGTH)
 
-    current_state = 2 # follow line
+    turn_rate = (TURN_RATE_ON_BACK_ON_LINE if current_state == DRIVE_LEFT
+                else -TURN_RATE_ON_BACK_ON_LINE)
+    robot.turn(turn_rate)
+
+    current_state = FOLLOW_LINE
 # end back_on_line
 
 def follow_line():
@@ -136,17 +153,18 @@ while True:
     check_surroundings()
     print_state()
 
-    if current_state == 0 or current_state == 1: #finished or break
+    if current_state == BREAK or current_state == FINISH:
         ev3.speaker.beep()
         break
     
-    elif current_state == 2: #follow line
+    elif current_state == FOLLOW_LINE:
         follow_line()
 
-    elif current_state == 3 or current_state == 4: #drive right or left
+    elif current_state == DRIVE_LEFT or current_state == DRIVE_RIGHT:
         if bot_color_sensor.reflection() > COL_THRESHOLD:
             back_on_line()
         else:
-            robot.drive(100, 30 if current_state == 3 else -30)
+            turn_angle = TURN_ANGLE if current_state == DRIVE_LEFT else -TURN_ANGLE
+            robot.drive(TURN_SPEED, turn_angle)
     
-    wait(50)
+    wait(WAIT_TIME_CYCLE)
